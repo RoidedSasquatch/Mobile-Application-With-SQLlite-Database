@@ -1,6 +1,9 @@
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:lab06/database.dart';
+import 'package:lab06/list_item.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,19 +30,35 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
+  static int ID = 1;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<String> listItems = [];
+  late List<ListItem> listItems = [];
   late TextEditingController input;
+  late final db;
+  late final listDAO;
+  late final result;
 
   void addListItem() {
     setState(() {
-      listItems.add(input.value.text);
+      ListItem listItem = ListItem(MyHomePage.ID++, input.value.text);
+      listDAO.insertList(listItem);
+      listItems.add(listItem);
       input.text = "";
+    });
+  }
+
+  void init() async {
+    db = await $FloorAppDatabase.databaseBuilder('app_database.db').build();
+    listDAO = db.listDao;
+    var result = await listDAO.findAllListItems();
+
+    setState(() {
+      listItems.addAll(result);
     });
   }
 
@@ -47,6 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     input = TextEditingController();
+    init();
   }
 
   @override
@@ -76,7 +96,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         SizedBox(width: 50, child: Text("${rowNum + 1}.")),
-                        Text(listItems[rowNum]),
+                        Text(listItems[rowNum].listItem),
                       ]),
                   onLongPress: () {
                     showDialog(
@@ -90,6 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               ElevatedButton(
                                   onPressed: () {
                                     setState(() {
+                                      listDAO.delete(listItems[rowNum].id);
                                       listItems.removeAt(rowNum);
                                       Navigator.pop(context);
                                     });
